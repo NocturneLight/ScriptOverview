@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:ScriptOverview.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ScriptOverview.Views.FileSelectView"
+             xmlns:vm="using:ScriptOverview.ViewModels"
+             x:DataType="vm:FileSelectViewModel">
+
+  <Design.DataContext>
+    <vm:FileSelectViewModel />
+  </Design.DataContext>
+  
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+    <TextBlock Text="{Binding Greeting}" />
+    <Button Content="Select File" HorizontalAlignment="Center" Click="OnButtonClick" />
+  </StackPanel>
+</UserControl>
