@@ -17,10 +17,14 @@ type FileOverviewView () as this =
     member private this.InitializeComponent() =
         AvaloniaXamlLoader.Load(this)
 
+    
     member this.OnInitialization(sender: obj, args: EventArgs) =
         let context = this.DataContext :?> FileOverviewViewModel
         let fileContents = context.FileContents.ChildElements |> Seq.toList
 
         // TODO: Split list on empty spaces.
         //let s = List.partition (fun l -> l) <| context.FileContents.ChildElements |> List.toSeq
+        printfn ""
+
+    member this.GoToPreviousView(sender: obj, args: RoutedEventArgs) =
         printfn ""
