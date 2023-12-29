@@ -9,8 +9,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:CompileBindings="True"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Script Overview"
-        Content="{Binding View}">
+        Title="Script Overview">
 
   <Design.DataContext>
     <!-- This only sets the DataContext for the previewer in an IDE,
@@ -18,10 +17,14 @@
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
-  <StackPanel>
-    <!--
-    <views:FileOverviewWindow />
-    -->
-    <TextBlock>This is a test.</TextBlock>
+  <StackPanel VerticalAlignment="Center" Spacing="50">
+    <!--The contents of the current view.-->
+    <TransitioningContentControl Content="{Binding View}" />
+
+    <!--The back and next buttons to switch views.-->
+    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="30">
+      <Button Command="{Binding PrevViewCommand}" IsVisible="{Binding IsNavigationVisible}" Content="Previous" Width="80" HorizontalContentAlignment="Center" />
+      <Button Command="{Binding NextViewCommand}" IsVisible="{Binding IsNavigationVisible}" Content="Next" Width="80" HorizontalContentAlignment="Center" />
+    </StackPanel>
   </StackPanel>
 </Window>

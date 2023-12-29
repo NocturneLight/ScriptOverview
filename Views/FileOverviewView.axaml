@@ -14,10 +14,9 @@
 
   <Grid ColumnDefinitions="*, *" RowDefinitions="*" ShowGridLines="True">
     <StackPanel Grid.Column="0" Spacing="15" VerticalAlignment="Center">
-      <TextBlock Text="What would you like to do?" HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding FileName}" HorizontalAlignment="Center" />
       
       <Button Content="Get List of Actors in Script" HorizontalAlignment="Center" />
-      <Button Content="Cancel" HorizontalAlignment="Center" Click="GoToPreviousView" />
     </StackPanel>
     
     <TextBlock Text="2" Grid.Column="1" />
