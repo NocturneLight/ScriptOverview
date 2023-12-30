@@ -12,13 +12,45 @@
     <vm:FileOverviewViewModel />
   </Design.DataContext>
 
-  <Grid ColumnDefinitions="*, *" RowDefinitions="*" ShowGridLines="True">
-    <StackPanel Grid.Column="0" Spacing="15" VerticalAlignment="Center">
-      <TextBlock Text="{Binding FileName}" HorizontalAlignment="Center" />
+  <!--A grid with 2 columns and 1 row.-->
+  <Grid ColumnDefinitions="*, *" 
+        RowDefinitions="*" 
+        ShowGridLines="True">
+    <!--
+    Grid with the left side showing options for the user,
+    and the right side showing the contents of the document opened.
+    -->
+    <StackPanel Grid.Column="0" 
+                Spacing="15" 
+                VerticalAlignment="Center">
       
-      <Button Content="Get List of Actors in Script" HorizontalAlignment="Center" />
+      <!--Message informing the user that they should do something.-->
+      <TextBlock Text="{Binding Message}" 
+                 HorizontalAlignment="Center" />
+      
+      <!--Button that parses the docx file for potential actors.-->
+      <Button Content="Get List of Actors in Document" 
+              HorizontalAlignment="Center"
+              Command="{Binding GetActorsCommand}"
+              CommandParameter="{Binding $parent[Window]}" />
+      
+      <!--
+      Button that takes a docx file and converts it to a
+      nani script for use in Unity projects.
+      -->
+      <Button Content="Convert Document to Naniscript" 
+              HorizontalAlignment="Center"/>
     </StackPanel>
-    
-    <TextBlock Text="2" Grid.Column="1" />
+
+    <!--
+    Displays the entire string list containing the 
+    contents of the docx file the user chose.
+    -->
+    <ListBox ItemsSource="{Binding FileBodySummary}" 
+             Grid.Column="1" 
+             MaxHeight="800" 
+             Background="Transparent"
+             AutoScrollToSelectedItem="True"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto" /> 
   </Grid>
 </UserControl>

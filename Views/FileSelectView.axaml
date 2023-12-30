@@ -14,12 +14,19 @@
   
   <StackPanel HorizontalAlignment="Center" Spacing="20" Unloaded="OnUnload">
     <!--The message telling the user what to do.-->
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" />
+    <TextBlock Text="{Binding Greeting}" 
+               HorizontalAlignment="Center" />
     
     <!--The button allowing the player to select a file.-->
-    <Button Content="Select File" Command="{Binding SelectFileCommand}" CommandParameter="{Binding $parent[Window]}" HorizontalAlignment="Center" />
+    <Button Content="Select File" 
+            Command="{Binding SelectFileCommand}" 
+            CommandParameter="{Binding $parent[Window]}" 
+            HorizontalAlignment="Center" />
     
     <!--The textbox showing the current chosen file.-->
-    <TextBox Text="{Binding FileName}" IsReadOnly="True" IsHitTestVisible="False" HorizontalContentAlignment="Center" />
+    <TextBox Text="{Binding FileName}" 
+             IsReadOnly="True" 
+             IsHitTestVisible="False" 
+             HorizontalContentAlignment="Center" />
     </StackPanel>
 </UserControl>

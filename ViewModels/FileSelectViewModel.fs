@@ -7,6 +7,8 @@ open System
 open Avalonia.Platform.Storage
 open DocumentFormat.OpenXml.Packaging
 open DocumentFormat.OpenXml.Wordprocessing
+open System.IO
+open System.Diagnostics
 
 type FileSelectViewModel() as this =
     inherit PageViewModelBase()
@@ -17,20 +19,21 @@ type FileSelectViewModel() as this =
     let mutable _FileName = "The name of the file you chose will show here once selected!"
     let mutable _DocumentBody: Body = null
 
+    // Lets the user select a file ansynchronously.
     let SelectFile(sender: Window) =
         // Task that when ran, lets the user pick a file on their computer.
         let task = async {
             let topLevel = TopLevel.GetTopLevel sender
             
-            let options: FilePickerOpenOptions = 
+            let options = 
                 FilePickerOpenOptions() 
-                |> fun (option: FilePickerOpenOptions) -> 
+                |> fun option -> 
                     option.Title <- "Select File"
                     option.AllowMultiple <- false
                     
                     option
             
-            return! topLevel.StorageProvider.OpenFilePickerAsync(options) |> Async.AwaitTask
+            return! topLevel.StorageProvider.OpenFilePickerAsync options |> Async.AwaitTask
         }
 
         // Runs the task and returns the user's chosen file if it exists, else null.
@@ -42,15 +45,26 @@ type FileSelectViewModel() as this =
         match file with
         | Some(doc) -> 
             this.FileName <- doc.Name
-            _DocumentBody <- WordprocessingDocument.Open(doc.Path.LocalPath, false).MainDocumentPart.Document.Body
+            
+            try
+                _DocumentBody <- WordprocessingDocument.Open(doc.Path.LocalPath, false).MainDocumentPart.Document.Body
+            with
+                | :? FileFormatException -> 
+                    // Outputs an error, then closes the program.
+                    let message = "The file you tried to open was not a .docx file."
+                    
+                    Debug.WriteLine message
+                    sender.Close()
 
             (sender.DataContext :?> ViewModelBase).IsNavigationVisible <- true
             
         | None -> 
-            raise (InvalidOperationException <| "There was either no file selected, or more than one file selected.")
+            ()
 
+    // On creation of the object, creates a reactive command for selecting a file. 
     do _SelectFileCommand <- ReactiveCommand.Create<Window>(SelectFile)
         
+
     member val Greeting = "Welcome to Script Overview! Please select a file to get details on it."
 
     // Getters and setters go here.
