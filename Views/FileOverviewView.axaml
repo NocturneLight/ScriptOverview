@@ -35,11 +35,13 @@
               CommandParameter="{Binding $parent[Window]}" />
       
       <!--
-      Button that takes a docx file and converts it to a
+      Button that takes a file and converts it to a
       nani script for use in Unity projects.
       -->
       <Button Content="Convert Document to Naniscript" 
-              HorizontalAlignment="Center"/>
+              HorizontalAlignment="Center"
+              Command="{Binding ConvertToNaniScriptCommand}" 
+              CommandParameter="{Binding $parent[Window]}" />
     </StackPanel>
 
     <!--

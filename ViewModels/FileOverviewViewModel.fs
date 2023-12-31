@@ -17,6 +17,7 @@ type FileOverviewViewModel() as this =
     let mutable _Message = ""
     let mutable _FileBodySummary: string seq = Seq.empty
     let mutable _GetActorsCommand: ICommand = null
+    let mutable _ConvertToNaniScriptCommand: ICommand = null
 
     // Function which parses the document for a
     // potential list of actors and writes them to a file.
@@ -77,9 +78,14 @@ type FileOverviewViewModel() as this =
         <| SaveToFileInfo(sender) 
         <| actors
 
+    let ConvertDocumentToNaniScript(sender: Window) =
+        printfn ""
+        raise (NotImplementedException "This isn't implemented yet.")
+
     // On creation of the object, creates reactive commands.
     do
         _GetActorsCommand <- ReactiveCommand.Create<Window>(WriteActorsToFile)
+        _ConvertToNaniScriptCommand <- ReactiveCommand.Create<Window>(ConvertDocumentToNaniScript)
 
     // Getters and setters.
     member val FileContents: Body = null with get, set
@@ -119,4 +125,10 @@ type FileOverviewViewModel() as this =
 
         and set(value) =
             this.RaiseAndSetIfChanged(&_GetActorsCommand, value) |> ignore
+
+    member this.ConvertToNaniScriptCommand
+        with get() = _ConvertToNaniScriptCommand
+
+        and set(value) =
+            this.RaiseAndSetIfChanged(&_ConvertToNaniScriptCommand, value) |> ignore
             
