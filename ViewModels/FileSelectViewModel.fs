@@ -3,12 +3,12 @@
 open ReactiveUI
 open System.Windows.Input
 open Avalonia.Controls
-open System
 open Avalonia.Platform.Storage
-open DocumentFormat.OpenXml.Packaging
 open DocumentFormat.OpenXml.Wordprocessing
-open System.IO
+open ScriptOverview.Models.Utilities
+open System
 open System.Diagnostics
+open DocumentFormat.OpenXml.Packaging
 
 type FileSelectViewModel() as this =
     inherit PageViewModelBase()
@@ -21,43 +21,48 @@ type FileSelectViewModel() as this =
 
     // Lets the user select a file ansynchronously.
     let SelectFile(sender: Window) =
-        // Task that when ran, lets the user pick a file on their computer.
-        let task = async {
-            let topLevel = TopLevel.GetTopLevel sender
-            
-            let options = 
-                FilePickerOpenOptions() 
-                |> fun option -> 
-                    option.Title <- "Select File"
-                    option.AllowMultiple <- false
-                    
-                    option
-            
-            return! topLevel.StorageProvider.OpenFilePickerAsync options |> Async.AwaitTask
-        }
+        let file = ReadFromFileInfo sender
 
-        // Runs the task and returns the user's chosen file if it exists, else null.
-        let file =
-            task
-            |> Async.RunSynchronously 
-            |> Seq.tryExactlyOne
-
+        // Parses the corresponding document if it is supported.
         match file with
-        | Some(doc) -> 
+        | Some(doc) ->  
+            let extension = doc.Name.Split '.'
+            
             this.FileName <- doc.Name
             
-            try
-                _DocumentBody <- WordprocessingDocument.Open(doc.Path.LocalPath, false).MainDocumentPart.Document.Body
-            with
-                | :? FileFormatException -> 
-                    // Outputs an error, then closes the program.
-                    let message = "The file you tried to open was not a .docx file."
-                    
-                    Debug.WriteLine message
-                    sender.Close()
+            match Array.last extension with
+            // Parses a Word document.
+            | "docx" | "doc" ->
+                try
+                    use document = WordprocessingDocument.Open(doc.Path.LocalPath, false)
 
-            (sender.DataContext :?> ViewModelBase).IsNavigationVisible <- true
+                    _DocumentBody <- 
+                        document.MainDocumentPart.Document.Body
+                with
+                    // Outputs the corresponding error and then closes the program.
+                    | :? ArgumentNullException -> 
+                        Debug.WriteLine $"The file path was somehow set to null. The path used has the value: {doc.Path.LocalPath}"
+                        sender.Close()
+                    
+                    | :? OpenXmlPackageException ->
+                        Debug.WriteLine $"The file you tried to open seems to not be a valid Open XML Wordprocessing document."
+                        sender.Close()
             
+            // TODO: Parse a text document.
+            | "txt" ->
+                raise (NotImplementedException "Support for .txt files is not yet implemented.")
+            
+            // TODO: Parse a pdf document.
+            | "pdf" ->
+                raise (NotImplementedException "Support for .pdf files is not yet implemented.")
+            
+            // Throw an error in any other case.
+            | _ -> 
+                raise (NotSupportedException "The file type you chose is not supported.")
+           
+            // Enables the navigation buttons.
+            (sender.DataContext :?> ViewModelBase).IsNavigationVisible <- true 
+        
         | None -> 
             ()
 

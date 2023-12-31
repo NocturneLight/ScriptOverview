@@ -19,8 +19,8 @@ type FileOverviewViewModel() as this =
     let mutable _GetActorsCommand: ICommand = null
 
     // Function which parses the document for a
-    // potential list of actors.
-    let GetActors(sender: Window) =
+    // potential list of actors and writes them to a file.
+    let WriteActorsToFile(sender: Window) =
         let body = this.FileContents.ChildElements
         
         // Gets every instance of the Run object.
@@ -33,6 +33,7 @@ type FileOverviewViewModel() as this =
         // Filters the document in various ways looking for potential names.
         let actors =
             results
+            // Gets the dialogue string.
             |> Seq.map(fun e -> 
                 match e with
                 | Some(element) -> 
@@ -40,11 +41,13 @@ type FileOverviewViewModel() as this =
                 | None -> 
                     String.Empty
             )
+            // Filters out all strings that don't contains ":".
             |> Seq.where(fun s -> 
                 s.Contains ":"
             )
+            // Replaces any string that doesn't appear to be a name with the empty string. 
             |> Seq.map(fun s -> 
-                let potentialActors = (s.Split ":")[0]
+                let potentialActors = Array.head <| s.Split ":"
 
                 match potentialActors with
                 | name when name.Contains "," -> 
@@ -62,7 +65,9 @@ type FileOverviewViewModel() as this =
                 | _ ->
                     potentialActors.Trim()
             )
+            // Filters out any duplicate strings.
             |> Seq.distinct
+            // Filters out any remaining empty strings or null.
             |> Seq.where(fun s -> 
                 not <| String.IsNullOrEmpty s
             )
@@ -74,7 +79,7 @@ type FileOverviewViewModel() as this =
 
     // On creation of the object, creates reactive commands.
     do
-        _GetActorsCommand <- ReactiveCommand.Create<Window>(GetActors)
+        _GetActorsCommand <- ReactiveCommand.Create<Window>(WriteActorsToFile)
 
     // Getters and setters.
     member val FileContents: Body = null with get, set

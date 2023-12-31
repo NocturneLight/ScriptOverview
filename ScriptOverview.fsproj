@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Models\CustomFileFilters.fs" />
     <Compile Include="Models\Utilities.fs" />
     <Compile Include="ViewModels\ViewModelBase.fs" />
     <Compile Include="ViewModels\PageViewModelBase.fs" />
