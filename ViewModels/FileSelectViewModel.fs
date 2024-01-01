@@ -19,9 +19,9 @@ type FileSelectViewModel() as this =
     let mutable _FileName = "The name of the file you chose will show here once selected!"
     let mutable _DocumentBody: Body = null
 
-    // Lets the user select a file ansynchronously.
+    // Lets the user select a file asynchronously.
     let SelectFile(sender: Window) =
-        let file = ReadFromFileInfo sender
+        let file = GetReadFromFile sender
 
         // Parses the corresponding document if it is supported.
         match file with

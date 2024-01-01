@@ -7,6 +7,8 @@ open DocumentFormat.OpenXml
 open System
 open Avalonia.Controls
 open ScriptOverview.Models.Utilities
+open System.Text.RegularExpressions
+open System.Text
 
 type FileOverviewViewModel() as this =
     inherit PageViewModelBase()
@@ -22,30 +24,11 @@ type FileOverviewViewModel() as this =
     // Function which parses the document for a
     // potential list of actors and writes them to a file.
     let WriteActorsToFile(sender: Window) =
-        let body = this.FileContents.ChildElements
-        
-        // Gets every instance of the Run object.
-        let results =
-            body
-            |> Seq.map(fun e -> 
-                Seq.tryFind(fun (x: OpenXmlElement) -> x :? Run) 
-                    e.ChildElements)
-        
         // Filters the document in various ways looking for potential names.
         let actors =
-            results
-            // Gets the dialogue string.
-            |> Seq.map(fun e -> 
-                match e with
-                | Some(element) -> 
-                    element.InnerText
-                | None -> 
-                    String.Empty
-            )
-            // Filters out all strings that don't contains ":".
-            |> Seq.where(fun s -> 
-                s.Contains ":"
-            )
+            this.FileBodySummary
+            // Filters out anything the doesn't contain a ':'.
+            |> Seq.where(fun (s: string) -> s.Contains ":")
             // Replaces any string that doesn't appear to be a name with the empty string. 
             |> Seq.map(fun s -> 
                 let potentialActors = Array.head <| s.Split ":"
@@ -55,6 +38,9 @@ type FileOverviewViewModel() as this =
                     String.Empty
 
                 | name when name.Contains "." ->
+                    String.Empty
+
+                | name when name.StartsWith "--" ->
                     String.Empty
 
                 | name when name.ToLower().Contains "sequence" ->
@@ -74,12 +60,56 @@ type FileOverviewViewModel() as this =
             )
 
         // Gets the file info and then writes to said file.
-        WriteToTextFile 
-        <| SaveToFileInfo(sender) 
-        <| actors
+        WriteToTextFile (GetSaveToFile sender _FileName) actors
 
     let ConvertDocumentToNaniScript(sender: Window) =
-        printfn ""
+        // Gets every instance of the Run object grouped by paragraph.
+        let results = GetRunElementsFromDocument this.FileContents.ChildElements
+        
+        let formattedText = 
+            results
+            // Looks for bold, italic, or colored text and adds text tags.
+            |> Seq.map(fun para -> 
+                let sentence = StringBuilder()
+
+                para 
+                // Iterates through every Run object and applies the appropriate tags 
+                // to its inner text.
+                |> Seq.iter(fun e -> 
+                    let fragment = StringBuilder(e.InnerText)
+                    let matchCriteria = "[\S]+" // Apply text tags if the inner text is NOT just whitespace.
+
+                    match e.RunProperties with
+                    | null ->
+                        ()
+
+                    // Applies italic tags to the text fragment.
+                    | prop when prop.Italic <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
+                        fragment.Insert(0, "<i>") |> ignore
+                        fragment.Append "</i>" |> ignore
+
+                    // Applies bold tags to the text fragment.
+                    | prop when prop.Bold <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
+                        fragment.Insert(0, "<b>") |> ignore
+                        fragment.Append "</b>" |> ignore
+
+                    // Applies color tags to the text fragment.
+                    | prop when prop.Color <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
+                        fragment.Insert(0, $"<color=#{prop.Color.Val}>") |> ignore
+                        fragment.Append "</color>" |> ignore
+
+                    | _ ->
+                        ()
+
+                    // Adds the sentence fragment to the whole string we're making.
+                    sentence.Append fragment |> ignore
+                )
+
+                sentence.ToString()
+            )
+
+        // TODO: Split into multiple documents divided by scene.
+
         raise (NotImplementedException "This isn't implemented yet.")
 
     // On creation of the object, creates reactive commands.

@@ -4,9 +4,13 @@ open Avalonia.Controls
 open Avalonia.Platform.Storage
 open System.IO
 open ScriptOverview.Models.FileFilters
+open DocumentFormat.OpenXml
+open DocumentFormat.OpenXml.Wordprocessing
+open System.Text
 
 module Utilities =
-    let ReadFromFileInfo(sender: Window) =
+    // Gets information for the file the user wants read. 
+    let GetReadFromFile(sender: Window) =
         // Task that when ran, lets the user pick a file on their computer.
         let task = async {
             let topLevel = TopLevel.GetTopLevel sender
@@ -29,7 +33,15 @@ module Utilities =
         task |> Async.RunSynchronously |> Seq.tryExactlyOne
     
     // Gets information on where the user wants their file stored.
-    let SaveToFileInfo(sender: Window) =
+    let GetSaveToFile(sender: Window) (name: string) =
+        // Assembles a suggested file name based on the file name 
+        // of the user's original chosen file. 
+        let fileName = 
+            name.Split "." 
+            |> Array.head 
+            |> StringBuilder
+            |> fun sb -> sb.Append(" ~ Actor List.txt")
+        
         // Task that when ran, gets the file we'll be saving to.
         let task = async {
             let topLevel = TopLevel.GetTopLevel sender
@@ -38,7 +50,7 @@ module Utilities =
                 FilePickerSaveOptions()
                 |> fun options -> 
                     options.Title <- "Save File To"
-                    options.SuggestedFileName <- "Actors List.txt"
+                    options.SuggestedFileName <- fileName.ToString()
 
                     options
 
@@ -55,6 +67,14 @@ module Utilities =
             ()
         | _ ->
             File.WriteAllLines (file.Path.LocalPath, text)
+
+    // Gets all instances of the Run object from a document's body paragraph by paragraph.
+    let GetRunElementsFromDocument(body: OpenXmlElementList) = 
+        body 
+        |> Seq.map(fun e -> e.ChildElements 
+                            |> Seq.where(fun e -> e :? Run) 
+                            |> Seq.map(fun e -> e :?> Run)) 
+        
 
     
 
