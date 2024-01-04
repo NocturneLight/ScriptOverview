@@ -3,12 +3,12 @@
 open ReactiveUI
 open DocumentFormat.OpenXml.Wordprocessing
 open System.Windows.Input
-open DocumentFormat.OpenXml
 open System
 open Avalonia.Controls
 open ScriptOverview.Models.Utilities
 open System.Text.RegularExpressions
 open System.Text
+open ScriptOverview.Models.RegexFilters
 
 type FileOverviewViewModel() as this =
     inherit PageViewModelBase()
@@ -55,17 +55,18 @@ type FileOverviewViewModel() as this =
             // Filters out any duplicate strings.
             |> Seq.distinct
             // Filters out any remaining empty strings or null.
-            |> Seq.where(fun s -> 
-                not <| String.IsNullOrEmpty s
-            )
+            |> Seq.where(fun s -> not <| String.IsNullOrEmpty s)
+
+        let filePath = (GetSaveToFile sender _FileName "~ Actor List.txt").Path.LocalPath
 
         // Gets the file info and then writes to said file.
-        WriteToTextFile (GetSaveToFile sender _FileName) actors
+        WriteToTextFile filePath actors
 
     let ConvertDocumentToNaniScript(sender: Window) =
         // Gets every instance of the Run object grouped by paragraph.
         let results = GetRunElementsFromDocument this.FileContents.ChildElements
         
+        // The whole body of text, with text tags applied.
         let formattedText = 
             results
             // Looks for bold, italic, or colored text and adds text tags.
@@ -82,6 +83,11 @@ type FileOverviewViewModel() as this =
                     match e.RunProperties with
                     | null ->
                         ()
+
+                    // Inserts a semicolon to make it a comment if the string
+                    // is name of the scene we're on.
+                    | _ when Regex.IsMatch(e.InnerText, ScenePrologueRegex) ->
+                        fragment.Insert(0, "; ") |> ignore
 
                     // Applies italic tags to the text fragment.
                     | prop when prop.Italic <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
@@ -108,9 +114,57 @@ type FileOverviewViewModel() as this =
                 sentence.ToString()
             )
 
-        // TODO: Split into multiple documents divided by scene.
+        // A grouping of each text group that we want to have its own file.
+        let bodies = 
+            this.FileBodySummary 
+            // Looks for the string that says "[Scene] or [Prologue] [some number]" or "[prologue]" using Regex.
+            |> Seq.where(fun s -> 
+                Regex.IsMatch(s, ScenePrologueRegex))
+            // Looks for the index of every scene or prologue string.
+            |> Seq.map(fun s -> 
+                this.FileBodySummary |> Seq.findIndex((=) s))
+            // Gets the range of elements between the previous index of a start scene 
+            // and the index just before the next scene.
+            |> fun breakpoint -> 
+                breakpoint
+                |> Seq.map(fun s ->
+                    let currentIndex = breakpoint |> Seq.findIndex((=) s)
+                    let previousElement = breakpoint |> Seq.tryItem (currentIndex - 1)
 
-        raise (NotImplementedException "This isn't implemented yet.")
+                    match previousElement with
+                    | Some(value) ->
+                        GetRangeOfSeqElements formattedText value (s - value)
+                    | None ->
+                        GetRangeOfSeqElements formattedText 0 s
+                )
+        
+        // Gets the folder to write files to.
+        let folder = GetFolder(sender)
+
+        match folder with
+        | Some(folder) ->
+            // Gets the file info and writes each body of text to its own file.
+            bodies
+            |> Seq.iter(fun b ->
+                let fileName = Seq.head b
+
+                match fileName with
+                // When the file name is an empty string, then
+                // it's the portion of the document with writer credits.
+                | _ when fileName = String.Empty ->
+                    WriteToTextFile $"{folder.Path.LocalPath}/Credits.nani" b
+
+                // In all other cases, it's a regular scene, so we use that scene
+                // number string as the file name.
+                | _ ->    
+                    let formattedName = Regex.Match(fileName, "[^;]+").Value.Trim()
+
+                    WriteToTextFile $"{folder.Path.LocalPath}/{formattedName}.nani" b
+            )
+
+        | None ->
+            ()
+
 
     // On creation of the object, creates reactive commands.
     do

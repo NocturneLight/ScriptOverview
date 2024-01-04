@@ -39,7 +39,7 @@ type MainWindowViewModel() as this =
     // Sets the view to the previous view.
     let GoToPrevView() =
         let index = List.tryFindIndex(fun v -> v = this.View) <| this.Pages
-
+        
         match index with
         | Some(i) ->
             let prevIndex = i - 1
