@@ -12,47 +12,47 @@
     <vm:FileOverviewViewModel />
   </Design.DataContext>
 
-  <!--A grid with 2 columns and 1 row.-->
-  <Grid ColumnDefinitions="*, *" 
-        RowDefinitions="*" 
-        ShowGridLines="True">
+  <SplitView IsPaneOpen="True"
+             DisplayMode="Inline"
+             PaneBackground="#100010"
+             OpenPaneLength="500">
     <!--
-    Grid with the left side showing options for the user,
+    SplitView with the left side showing options for the user,
     and the right side showing the contents of the document opened.
     -->
-    <StackPanel Grid.Column="0" 
-                Spacing="15" 
-                VerticalAlignment="Center">
+    <SplitView.Pane>
+      <StackPanel Spacing="15" 
+                  VerticalAlignment="Center">
       
-      <!--Message informing the user that they should do something.-->
-      <TextBlock Text="{Binding Message}" 
-                 HorizontalAlignment="Center" />
+        <!--Message informing the user that they should do something.-->
+        <Label Content="{Binding Message}" 
+               HorizontalAlignment="Center" />
       
-      <!--Button that parses the docx file for potential actors.-->
-      <Button Content="Get List of Actors in Document" 
-              HorizontalAlignment="Center"
-              Command="{Binding GetActorsCommand}"
-              CommandParameter="{Binding $parent[Window]}" />
+        <!--Button that parses the docx file for potential actors.-->
+        <Button Content="Get List of Actors in Document" 
+                HorizontalAlignment="Center"
+                Command="{Binding GetActorsCommand}"
+                CommandParameter="{Binding $parent[Window]}" />
       
-      <!--
-      Button that takes a file and converts it to a
-      nani script for use in Unity projects.
-      -->
-      <Button Content="Convert Document to Naniscript" 
-              HorizontalAlignment="Center"
-              Command="{Binding ConvertToNaniScriptCommand}" 
-              CommandParameter="{Binding $parent[Window]}" />
-    </StackPanel>
+        <!--
+        Button that takes a file and converts it to a
+        nani script for use in Unity projects.
+        -->
+        <Button Content="Convert Document to Naniscript" 
+                HorizontalAlignment="Center"
+                Command="{Binding ConvertToNaniScriptCommand}" 
+                CommandParameter="{Binding $parent[Window]}" />
+      </StackPanel>
+    </SplitView.Pane>
 
     <!--
     Displays the entire string list containing the 
     contents of the docx file the user chose.
     -->
     <ListBox ItemsSource="{Binding FileBodySummary}" 
-             Grid.Column="1" 
              MaxHeight="800" 
              Background="Transparent"
              AutoScrollToSelectedItem="True"
              ScrollViewer.HorizontalScrollBarVisibility="Auto" /> 
-  </Grid>
+  </SplitView>
 </UserControl>
