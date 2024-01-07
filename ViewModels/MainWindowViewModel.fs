@@ -20,7 +20,7 @@ type MainWindowViewModel() =
 
     // On creation, we set the view to file select.
     // This is our starting view.
-    do _View <- Some(_ViewDictionary.Item FILESELECT)
+    do _View <- Some <| _ViewDictionary.Item FILESELECT
 
     override this.GoToView(view: VIEWS, [<ParamArrayAttribute>] args: 'a array) =
         match view with
@@ -38,7 +38,7 @@ type MainWindowViewModel() =
             ()
 
         // Switch to the given view.
-        this.View <- Some(_ViewDictionary.Item view)
+        this.View <- Some <| _ViewDictionary.Item view
     
     // Getters and setters.
     member this.View

@@ -169,8 +169,10 @@ type FileOverviewViewModel() =
 
     // Saves each scene to a .nani file of its own.
     let SaveToNaniScript(sender: Window) =
-        // Gets the folder to write files to.
-        let folder = GetFolder(sender)
+        // Gets the folder to write files to or brings back nothing.
+        let folder = 
+            GetFolder(sender) 
+            |> Option.map(fun f -> f.TryGetLocalPath())
         
         // Writes the text to files if we get a folder, otherwise do nothing.
         match folder with
@@ -208,7 +210,7 @@ type FileOverviewViewModel() =
                     )
 
             // Gets the file info and writes each body of text to a file.
-            textGroupings 
+            textGroupings
             |> Seq.iter(fun group ->
                 let fileName = Seq.head group
 
@@ -216,15 +218,15 @@ type FileOverviewViewModel() =
                 // When the file name is an empty string, then
                 // it's the portion of the document with writer credits.
                 | _ when fileName = String.Empty ->
-                    WriteToTextFile $"{fldr.Path.LocalPath}/Credits.nani" group
-                
+                    WriteToTextFile (Some $"{fldr}/Credits.nani") group
+                    
                 // In all other cases, it's a regular scene, so we use the word "scene" and 
                 // its number as the file name.
                 | _ ->
                     // Gets the file name with the ; omitted.
                     let formattedName = Regex.Match(fileName, Regex.Match(fileName, "[^;]+").Value.Trim())
                     
-                    WriteToTextFile $"{fldr.Path.LocalPath}/{formattedName.Value}.nani" group
+                    WriteToTextFile (Some $"{fldr}/{formattedName.Value}.nani") group
             )
         | None ->
             ()
@@ -253,10 +255,12 @@ type FileOverviewViewModel() =
             // Removes any duplicate strings.
             |> Seq.distinct
 
-        // Gets information on the user's chosen file.
-        let filePath = (GetSaveToFile sender _FileStructure.Value.GetFileName "~ Actor List.txt").Path.LocalPath
+        // Gets information on the user's chosen file or comes back with nothing.
+        let filePath = 
+            GetSaveToFile sender _FileStructure.Value.GetFileName " ~ Actor List.txt"
+            |> Option.map(fun f -> f.TryGetLocalPath())
 
-        // Writes to the user's chosen file.
+        // Writes to the user's chosen file or does nothing.
         WriteToTextFile filePath actors
 
     // Switches the view to the File Select view.
@@ -271,12 +275,14 @@ type FileOverviewViewModel() =
 
     member this.InitializeView(file: IStorageFile) =
         // Gets and stores the file name and extension for later use.
-        _FileStructure <- Some(FileStructure(Regex.Match(file.Name, FileNameRegex), Regex.Match(file.Name, FileExtensionRegex)))
+        _FileStructure <- 
+            FileStructure(Regex.Match(file.Name, FileNameRegex), Regex.Match(file.Name, FileExtensionRegex)) 
+            |> Option.Some
 
         // Sets the message to display on the File Overview screen.
         this.Message <- $"What would you like to do with {_FileStructure.Value.GetFileName}?"
 
-        // Stores the contents of the document for later use.
+        // Gets the contents of the document and then stores them in the code for later use.
         use document = WordprocessingDocument.Open(file.TryGetLocalPath(), false)
         
         _Document <- document.MainDocumentPart.Document.Body

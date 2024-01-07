@@ -57,8 +57,8 @@ module Utilities =
             return! topLevel.StorageProvider.SaveFilePickerAsync options |> Async.AwaitTask
         }
         
-        // Runs the task and returns the user's chosen file if it exists, else null.
-        task |> Async.RunSynchronously
+        // Runs the task and returns the user's chosen file if it exists, else None.
+        task |> Async.RunSynchronously |> Option.ofObj
     
     // Gets the folder to save files in.
     let GetFolder(sender: Window) =
@@ -80,13 +80,10 @@ module Utilities =
         // Runs the task and returns the user's chosen file if it exists, else null.
         task |> Async.RunSynchronously |> Seq.tryExactlyOne
 
-    // Writes to the given file.
-    let WriteToTextFile (file: string) (text: string seq) =
-        match file with
-        | null -> 
-            ()
-        | _ ->
-            File.WriteAllLines (file, text)
+    // Writes to the given file or does nothing.
+    let WriteToTextFile (file: string option) (text: string seq) =
+        file 
+        |> Option.iter(fun f -> File.WriteAllLines(f, text))
 
     // Gets all instances of the Run object from a document's body paragraph by paragraph.
     let GetRunElementsFromDocument(body: OpenXmlElementList) = 
