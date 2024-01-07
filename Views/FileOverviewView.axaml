@@ -40,8 +40,15 @@
         -->
         <Button Content="Convert Document to Naniscript" 
                 HorizontalAlignment="Center"
-                Command="{Binding ConvertToNaniScriptCommand}" 
+                Command="{Binding SaveToNaniScriptCommand}" 
                 CommandParameter="{Binding $parent[Window]}" />
+        
+        <!--Button to go back to the File Select view.-->
+        <Button Content="Back" 
+                HorizontalAlignment="Center"
+                Margin="0, 20, 0, 0"
+                Command="{Binding GoToViewCommand}" 
+                CommandParameter="{Binding $parent[Window]}"/>
       </StackPanel>
     </SplitView.Pane>
 
@@ -49,10 +56,11 @@
     Displays the entire string list containing the 
     contents of the docx file the user chose.
     -->
-    <ListBox ItemsSource="{Binding FileBodySummary}" 
+    <ListBox ItemsSource="{Binding FormattedDocumentContents}"
              MaxHeight="800" 
              Background="Transparent"
              AutoScrollToSelectedItem="True"
-             ScrollViewer.HorizontalScrollBarVisibility="Auto" /> 
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             IsTextSearchEnabled="True" />
   </SplitView>
 </UserControl>

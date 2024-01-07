@@ -13,11 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Models\Types.fs" />
     <Compile Include="Models\RegexFilters.fs" />
     <Compile Include="Models\CustomFileFilters.fs" />
     <Compile Include="Models\Utilities.fs" />
     <Compile Include="ViewModels\ViewModelBase.fs" />
-    <Compile Include="ViewModels\PageViewModelBase.fs" />
+    <Compile Include="ViewModels\WindowViewModelBase.fs" />
     <Compile Include="ViewModels\FileOverviewViewModel.fs" />
     <Compile Include="ViewModels\FileSelectViewModel.fs" />
     <Compile Include="ViewModels\MainWindowViewModel.fs" />

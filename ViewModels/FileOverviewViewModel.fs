@@ -9,200 +9,297 @@ open ScriptOverview.Models.Utilities
 open System.Text.RegularExpressions
 open System.Text
 open ScriptOverview.Models.RegexFilters
+open Avalonia.Platform.Storage
+open ScriptOverview.Models.Types
+open DocumentFormat.OpenXml.Packaging
+open Avalonia.Media
 
-type FileOverviewViewModel() as this =
-    inherit PageViewModelBase()
+type FileOverviewViewModel() =
+    inherit ViewModelBase()
     
-    let mutable _CanNavigateNext = false
-    let mutable _CanNavigatePrevious = true
-    let mutable _FileName = ""
-    let mutable _Message = ""
-    let mutable _FileBodySummary: string seq = Seq.empty
+    let mutable _FileStructure: FileStructure option = None
+    let mutable _Document: Body = null
+    let mutable _FormattedDocumentContents: obj seq = Seq.empty
+    let mutable _Message = String.Empty
     let mutable _GetActorsCommand: ICommand = null
-    let mutable _ConvertToNaniScriptCommand: ICommand = null
+    let mutable _SaveToNaniScriptCommand: ICommand = null
+    let mutable _GoToViewCommand: ICommand = null
 
-    // Function which parses the document for a
-    // potential list of actors and writes them to a file.
-    let WriteActorsToFile(sender: Window) =
-        // Filters the document in various ways looking for potential names.
-        let actors =
-            this.FileBodySummary
-            // Filters out anything the doesn't contain a ':'.
-            |> Seq.where(fun (s: string) -> s.Contains ":")
-            // Replaces any string that doesn't appear to be a name with the empty string. 
-            |> Seq.map(fun s -> 
-                let potentialActors = Array.head <| s.Split ":"
+    // Returns the script formatted with text tags or for display.
+    let FormatDocument (file: Run seq seq) (format: FORMAT) =
+        file
+        |> Seq.map(fun paragraph ->
+            let sentence = FormatManager.GetFormat format
+            
+            // Sets the font if we're displaying to screen.
+            match sentence with
+            | :? TextBlock as block ->
+                block.FontFamily <- FontFamily.Parse "Lucida"
 
-                match potentialActors with
-                | name when name.Contains "," -> 
-                    String.Empty
+            | _ ->
+                ()
 
-                | name when name.Contains "." ->
-                    String.Empty
-
-                | name when name.StartsWith "--" ->
-                    String.Empty
-
-                | name when name.ToLower().Contains "sequence" ->
-                    String.Empty
-
-                | name when (name.Split " ").Length > 3 && not <| name.ToLower().Contains "same time" ->
-                    String.Empty
+            paragraph
+            // Iterates through every Run object and applies the appropriate tags 
+            // to its inner text.
+            |> Seq.iter(fun words ->
+                let fragment = FormatManager.GetFormat format 
+                
+                // Sets the inner text to the text block or string builder.
+                match fragment with
+                | :? TextBlock as block ->
+                    block.Text <- words.InnerText
+                    
+                | :? StringBuilder as builder ->
+                    builder.Append words.InnerText |> ignore
 
                 | _ ->
-                    potentialActors.Trim()
-            )
-            // Filters out any duplicate strings.
-            |> Seq.distinct
-            // Filters out any remaining empty strings or null.
-            |> Seq.where(fun s -> not <| String.IsNullOrEmpty s)
+                    ()
+                
+                let matchCriteria = "[\S]+" // Apply text tags if the inner text is NOT just whitespace.
 
-        let filePath = (GetSaveToFile sender _FileName "~ Actor List.txt").Path.LocalPath
-
-        // Gets the file info and then writes to said file.
-        WriteToTextFile filePath actors
-
-    let ConvertDocumentToNaniScript(sender: Window) =
-        // Gets every instance of the Run object grouped by paragraph.
-        let results = GetRunElementsFromDocument this.FileContents.ChildElements
-        
-        // The whole body of text, with text tags applied.
-        let formattedText = 
-            results
-            // Looks for bold, italic, or colored text and adds text tags.
-            |> Seq.map(fun para -> 
-                let sentence = StringBuilder()
-
-                para 
-                // Iterates through every Run object and applies the appropriate tags 
-                // to its inner text.
-                |> Seq.iter(fun e -> 
-                    let fragment = StringBuilder(e.InnerText)
-                    let matchCriteria = "[\S]+" // Apply text tags if the inner text is NOT just whitespace.
-
-                    match e.RunProperties with
+                match fragment with
+                // Applies rich text settings to the text block object.
+                | :? TextBlock as block ->
+                    match words.RunProperties with
                     | null ->
                         ()
 
-                    // Inserts a semicolon to make it a comment if the string
-                    // is name of the scene we're on.
-                    | _ when Regex.IsMatch(e.InnerText, ScenePrologueRegex) ->
-                        fragment.Insert(0, "; ") |> ignore
+                    | _ as prop ->
+                        // Applies italic tags to the text fragment.
+                        match prop.Italic with
+                        | _ when prop.Italic <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                            block.FontStyle <- FontStyle.Italic
 
-                    // Applies italic tags to the text fragment.
-                    | prop when prop.Italic <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
-                        fragment.Insert(0, "<i>") |> ignore
-                        fragment.Append "</i>" |> ignore
+                        | _ ->
+                            ()
+                        
+                        // Applies bold tags to the text fragment.
+                        match prop.Bold with
+                        | _ when prop.Bold <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                            block.FontWeight <- FontWeight.Bold
+                        
+                        | _ ->
+                            ()
 
-                    // Applies bold tags to the text fragment.
-                    | prop when prop.Bold <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
-                        fragment.Insert(0, "<b>") |> ignore
-                        fragment.Append "</b>" |> ignore
+                        // Applies color tags to the text fragment.
+                        match prop.Color with
+                        | _ when prop.Color <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                            block.Foreground <- Brush.Parse $"#{prop.Color.Val}"    
 
-                    // Applies color tags to the text fragment.
-                    | prop when prop.Color <> null && Regex.IsMatch(e.InnerText, matchCriteria) ->
-                        fragment.Insert(0, $"<color=#{prop.Color.Val}>") |> ignore
-                        fragment.Append "</color>" |> ignore
+                        | _ ->
+                            ()
 
-                    | _ ->
+                        // Applies a font size to the text fragment.
+                        match prop.FontSize with
+                        | _ when prop.FontSize <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                            block.FontSize <- float prop.FontSize.Val.Value
+                 
+                        | _ ->  
+                            ()
+
+                // Applies rich text settings to the string builder.
+                | :? StringBuilder as builder ->
+                    match words.RunProperties with
+                    | null ->
                         ()
+                    
+                    | _ as prop ->
+                        // Inserts a semicolon to make it a comment if the string
+                        // is name of the scene we're on.
+                        match Regex.IsMatch(words.InnerText, ScenePrologueRegex) with
+                        | true ->
+                            builder.Insert(0, "; ") |> ignore
 
-                    // Adds the sentence fragment to the whole string we're making.
-                    sentence.Append fragment |> ignore
-                )
+                        | false ->
+                            // Applies italic tags to the text fragment.
+                            match prop.Italic with
+                            | _ when prop.Italic <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                                builder.Insert(0, "<i>") |> ignore
+                                builder.Append "</i>" |> ignore
 
-                sentence.ToString()
+                            | _ ->
+                                ()
+
+                            // Applies bold tags to the text fragment.
+                            match prop.Bold with
+                            | _ when prop.Bold <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                                builder.Insert(0, "<b>") |> ignore
+                                builder.Append "</b>" |> ignore
+
+                            | _ ->
+                                ()
+
+                            // Applies color tags to the text fragment.
+                            match prop.Color with
+                            | _ when prop.Color <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
+                                builder.Insert(0, $"<color=#{prop.Color.Val}>") |> ignore
+                                builder.Append "</color>" |> ignore
+
+                            | _ ->
+                                ()
+                | _ ->
+                    ()
+
+                // Adds the sentence fragment to the textblock 
+                // inline or string builder.
+                match sentence with
+                | :? TextBlock as block ->
+                    block.Inlines.Add (fragment :?> TextBlock)
+
+                | :? StringBuilder as builder ->
+                    builder.Append fragment |> ignore
+
+                | _ ->
+                    ()
             )
 
-        // A grouping of each text group that we want to have its own file.
-        let bodies = 
-            this.FileBodySummary 
-            // Looks for the string that says "[Scene] or [Prologue] [some number]" or "[prologue]" using Regex.
-            |> Seq.where(fun s -> 
-                Regex.IsMatch(s, ScenePrologueRegex))
-            // Looks for the index of every scene or prologue string.
-            |> Seq.map(fun s -> 
-                this.FileBodySummary |> Seq.findIndex((=) s))
-            // Gets the range of elements between the previous index of a start scene 
-            // and the index just before the next scene.
-            |> fun breakpoint -> 
-                breakpoint
-                |> Seq.map(fun s ->
-                    let currentIndex = breakpoint |> Seq.findIndex((=) s)
-                    let previousElement = breakpoint |> Seq.tryItem (currentIndex - 1)
+            // Returns the textblock or string as an
+            // object as that's the only way we can return it.
+            match sentence with
+            | :? TextBlock as block ->
+                block :> obj
 
-                    match previousElement with
-                    | Some(value) ->
-                        GetRangeOfSeqElements formattedText value (s - value)
-                    | None ->
-                        GetRangeOfSeqElements formattedText 0 s
-                )
-        
+            | :? StringBuilder as builder ->
+                builder.ToString() :> obj
+
+            | _ ->
+                ()
+        )
+
+    // Saves each scene to a .nani file of its own.
+    let SaveToNaniScript(sender: Window) =
         // Gets the folder to write files to.
         let folder = GetFolder(sender)
-
+        
+        // Writes the text to files if we get a folder, otherwise do nothing.
         match folder with
-        | Some(folder) ->
-            // Gets the file info and writes each body of text to its own file.
-            bodies
-            |> Seq.iter(fun b ->
-                let fileName = Seq.head b
+        | Some fldr ->
+            // Adds text tags to the document.
+            let formattedText = 
+                FormatDocument 
+                << GetRunElementsFromDocument <| _Document.ChildElements <| BUILDER
+                |> Seq.cast<string>
+
+            // Splits the string sequence on the start of a scene. 
+            let textGroupings =
+                formattedText 
+                // Gets the index of every instance of the start of a scene.
+                |> Seq.mapi(fun i s ->
+                    match Regex.IsMatch(s, ScenePrologueRegex) with
+                    | true ->
+                        Some i
+                    | false -> 
+                        None
+                )
+                // Filters out every none value.
+                |> Seq.where(fun i -> i <> None)
+                // Gets the range of values between each start of a scene.
+                |> fun sceneIndexes ->
+                    sceneIndexes 
+                    |> Seq.mapi(fun i sceneIndex -> 
+                        let previousSceneIndex = sceneIndexes |> Seq.tryItem(i - 1)
+
+                        match previousSceneIndex with
+                        | Some idx ->
+                            GetRangeOfSeqElements formattedText idx.Value (sceneIndex.Value - idx.Value)
+                        | None ->
+                            GetRangeOfSeqElements formattedText 0 (sceneIndex.Value - 0)
+                    )
+
+            // Gets the file info and writes each body of text to a file.
+            textGroupings 
+            |> Seq.iter(fun group ->
+                let fileName = Seq.head group
 
                 match fileName with
                 // When the file name is an empty string, then
                 // it's the portion of the document with writer credits.
                 | _ when fileName = String.Empty ->
-                    WriteToTextFile $"{folder.Path.LocalPath}/Credits.nani" b
-
-                // In all other cases, it's a regular scene, so we use that scene
-                // number string as the file name.
-                | _ ->    
-                    let formattedName = Regex.Match(fileName, "[^;]+").Value.Trim()
-
-                    WriteToTextFile $"{folder.Path.LocalPath}/{formattedName}.nani" b
+                    WriteToTextFile $"{fldr.Path.LocalPath}/Credits.nani" group
+                
+                // In all other cases, it's a regular scene, so we use the word "scene" and 
+                // its number as the file name.
+                | _ ->
+                    // Gets the file name with the ; omitted.
+                    let formattedName = Regex.Match(fileName, Regex.Match(fileName, "[^;]+").Value.Trim())
+                    
+                    WriteToTextFile $"{fldr.Path.LocalPath}/{formattedName.Value}.nani" group
             )
-
         | None ->
             ()
 
+    // Function which parses the document for a
+    // potential list of actors and writes them to a file.
+    let WriteActorsToFile(sender: Window) =
+        let actors = 
+            _Document.ChildElements
+            // Filters out anything that doesn't have a :.
+            |> Seq.where(fun s -> 
+                Regex.IsMatch(s.InnerText, "[A-Za-z'` ]+:"))
+            // Filters out anything in the sentence that's after a :.
+            |> Seq.map(fun s -> 
+                Regex.Match(s.InnerText, "[A-Za-z'` ]+:").Value)
+            // Filters out the : on all the remaining strings.
+            |> Seq.map(fun s -> Regex.Match(s, "[A-Za-z'` ]+").Value)
+            // Filters out anything that's longer than 3 words unless it contains the phrase 'at the same time'.
+            |> Seq.where(fun s -> 
+                Array.length <| Regex.Split(s, "\s") <= 3 || s.Trim().Contains "at the same time")
+            // Filters out anything containing the words "Dream Sequence" or "PSA".
+            |> Seq.where (fun s -> 
+                not (s.Contains "Dream Sequence" || s.Contains "PSA"))
+            // Removes any unecessary whitespace from the string.
+            |> Seq.map(fun s -> s.Trim())
+            // Removes any duplicate strings.
+            |> Seq.distinct
 
-    // On creation of the object, creates reactive commands.
+        // Gets information on the user's chosen file.
+        let filePath = (GetSaveToFile sender _FileStructure.Value.GetFileName "~ Actor List.txt").Path.LocalPath
+
+        // Writes to the user's chosen file.
+        WriteToTextFile filePath actors
+
+    // Switches the view to the File Select view.
+    let GoToView(sender: Window) =
+        (sender.DataContext :?> WindowViewModelBase).GoToView FILESELECT
+
+    // On creation of the object, creates reactive commands for each button.
     do
         _GetActorsCommand <- ReactiveCommand.Create<Window>(WriteActorsToFile)
-        _ConvertToNaniScriptCommand <- ReactiveCommand.Create<Window>(ConvertDocumentToNaniScript)
+        _SaveToNaniScriptCommand <- ReactiveCommand.Create<Window>(SaveToNaniScript)
+        _GoToViewCommand <- ReactiveCommand.Create<Window>(GoToView)
 
-    // Getters and setters.
-    member val FileContents: Body = null with get, set
+    member this.InitializeView(file: IStorageFile) =
+        // Gets and stores the file name and extension for later use.
+        _FileStructure <- Some(FileStructure(Regex.Match(file.Name, FileNameRegex), Regex.Match(file.Name, FileExtensionRegex)))
 
-    override this.CanNavigateNext 
-        with get() = _CanNavigateNext
+        // Sets the message to display on the File Overview screen.
+        this.Message <- $"What would you like to do with {_FileStructure.Value.GetFileName}?"
+
+        // Stores the contents of the document for later use.
+        use document = WordprocessingDocument.Open(file.TryGetLocalPath(), false)
         
-        and set(value) = 
-            this.RaiseAndSetIfChanged(&_CanNavigateNext, value) |> ignore
-
-    override this.CanNavigatePrevious
-        with get() = _CanNavigatePrevious
-
-        and set(value) =
-            this.RaiseAndSetIfChanged(&_CanNavigatePrevious, value) |> ignore
+        _Document <- document.MainDocumentPart.Document.Body
+        
+        // Format the document with a seq of Runs pulled from the document and
+        // sets the content panel.
+        _FormattedDocumentContents <- FormatDocument << GetRunElementsFromDocument <| _Document.ChildElements <| BLOCK
+        
+    // Getters and setters.
+    member val File: obj = null with get, set
+    member val FileContents: Body = null with get, set
     
-    member this.FileName
-        with get() = _FileName
-
-        and set(name) =
-            this.RaiseAndSetIfChanged(&_FileName, name) |> ignore
-
     member this.Message
         with get() = _Message
 
         and set(message) =
             this.RaiseAndSetIfChanged(&_Message, message) |> ignore
 
-    member this.FileBodySummary
-        with get() = _FileBodySummary
+    member this.FormattedDocumentContents
+        with get() = _FormattedDocumentContents
 
         and set(value) =
-            this.RaiseAndSetIfChanged(&_FileBodySummary, value) |> ignore
+            this.RaiseAndSetIfChanged(&_FormattedDocumentContents, value) |> ignore
 
     member this.GetActorsCommand
         with get() = _GetActorsCommand
@@ -210,9 +307,15 @@ type FileOverviewViewModel() as this =
         and set(value) =
             this.RaiseAndSetIfChanged(&_GetActorsCommand, value) |> ignore
 
-    member this.ConvertToNaniScriptCommand
-        with get() = _ConvertToNaniScriptCommand
+    member this.SaveToNaniScriptCommand
+        with get() = _SaveToNaniScriptCommand
 
         and set(value) =
-            this.RaiseAndSetIfChanged(&_ConvertToNaniScriptCommand, value) |> ignore
+            this.RaiseAndSetIfChanged(&_SaveToNaniScriptCommand, value) |> ignore
+
+    member this.GoToViewCommand
+        with get() = _GoToViewCommand
+
+        and set(value) =
+            this.RaiseAndSetIfChanged(&_GoToViewCommand, value) |> ignore
             

@@ -12,7 +12,7 @@
     <vm:FileSelectViewModel />
   </Design.DataContext>
   
-  <StackPanel HorizontalAlignment="Center" Spacing="20" Unloaded="OnUnload">
+  <StackPanel HorizontalAlignment="Center" Spacing="20">
     <!--The message telling the user what to do.-->
     <Label Content="{Binding Greeting}" 
            HorizontalAlignment="Center" />
@@ -22,11 +22,5 @@
             Command="{Binding SelectFileCommand}" 
             CommandParameter="{Binding $parent[Window]}" 
             HorizontalAlignment="Center" />
-    
-    <!--The textbox showing the current chosen file.-->
-    <TextBox Text="{Binding FileName}" 
-             IsReadOnly="True" 
-             IsHitTestVisible="False" 
-             HorizontalContentAlignment="Center" />
     </StackPanel>
 </UserControl>

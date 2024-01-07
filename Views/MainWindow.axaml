@@ -17,26 +17,15 @@
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
-  <StackPanel VerticalAlignment="Center" Spacing="50">
-    <!--The contents of the current view.-->
-    <TransitioningContentControl Content="{Binding View}" />
-
-    <!--The back and next buttons to switch views.-->
-    <StackPanel HorizontalAlignment="Center" 
-                Orientation="Horizontal" Spacing="30">
-      <!--Button which takes the user to the previous view.-->
-      <Button Command="{Binding PrevViewCommand}" 
-              IsVisible="{Binding IsNavigationVisible}" 
-              Content="Previous" 
-              Width="80" 
-              HorizontalContentAlignment="Center" />
-      
-      <!--Button which takes the user to the next view.-->
-      <Button Command="{Binding NextViewCommand}" 
-              IsVisible="{Binding IsNavigationVisible}" 
-              Content="Next" 
-              Width="80" 
-              HorizontalContentAlignment="Center" />
-    </StackPanel>
-  </StackPanel>
+  <!--The contents of the current view.-->
+  <TransitioningContentControl Content="{Binding View.Value}"
+                               VerticalContentAlignment="Center">
+    <!--
+    Has the TransitioningContentControl do a crossfade on
+    view change.
+    -->
+    <TransitioningContentControl.PageTransition>
+      <CrossFade Duration="0:00:00.900" />
+    </TransitioningContentControl.PageTransition>
+  </TransitioningContentControl>
 </Window>

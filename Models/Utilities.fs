@@ -92,7 +92,7 @@ module Utilities =
     let GetRunElementsFromDocument(body: OpenXmlElementList) = 
         body 
         |> Seq.map(fun e -> e.ChildElements 
-                            |> Seq.where(fun e -> e :? Run) 
+                            |> Seq.where(fun e -> e :? Run)
                             |> Seq.map(fun e -> e :?> Run)) 
 
     // Gets all the elements between a specified start index and a specified end index.
