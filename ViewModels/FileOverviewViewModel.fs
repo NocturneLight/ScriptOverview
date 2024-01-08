@@ -1,6 +1,7 @@
 ﻿namespace ScriptOverview.ViewModels
 
 open ReactiveUI
+open Avalonia.Controls.Documents
 open DocumentFormat.OpenXml.Wordprocessing
 open System.Windows.Input
 open System
@@ -20,7 +21,7 @@ type FileOverviewViewModel() =
     let mutable _FileStructure: FileStructure option = None
     let mutable _Document: Body = null
     let mutable _FormattedDocumentContents: obj seq = Seq.empty
-    let mutable _Message = String.Empty
+    let mutable _Message: TextBlock = null
     let mutable _GetActorsCommand: ICommand = null
     let mutable _SaveToNaniScriptCommand: ICommand = null
     let mutable _GoToViewCommand: ICommand = null
@@ -279,8 +280,29 @@ type FileOverviewViewModel() =
             FileStructure(Regex.Match(file.Name, FileNameRegex), Regex.Match(file.Name, FileExtensionRegex)) 
             |> Option.Some
 
+        // Creates 3 TextBlocks forming a sentence. Each formatted differently.
+        let messageBlock = 
+            TextBlock() |> fun tb -> 
+                tb.Text <- "What would you like to do with"; tb
+        
+        let nameBlock = 
+            TextBlock() |> fun tb -> 
+                tb.Text <- $" {_FileStructure.Value.GetFileName}"
+                tb.Foreground <- Brush.Parse (Colors.SkyBlue.ToString())
+                tb
+        
+        let questionBlock = TextBlock() |> fun tb -> tb.Text <- "?"; tb
+
+        // Adds the 3 text boxes to the inline collection of the main TextBlock.
+        let mainBlock = 
+            TextBlock() |> fun mb -> 
+                mb.Inlines.AddRange ([InlineUIContainer(messageBlock)] 
+                                    @ [InlineUIContainer(nameBlock)] 
+                                    @ [InlineUIContainer(questionBlock)])
+                mb
+
         // Sets the message to display on the File Overview screen.
-        this.Message <- $"What would you like to do with {_FileStructure.Value.GetFileName}?"
+        this.Message <- mainBlock
 
         // Gets the contents of the document and then stores them in the code for later use.
         use document = WordprocessingDocument.Open(file.TryGetLocalPath(), false)
