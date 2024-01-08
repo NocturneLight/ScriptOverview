@@ -67,6 +67,14 @@ type FileOverviewViewModel() =
                         ()
 
                     | _ as prop ->
+                        // Sets all text indicating the start of a scene to size 30.
+                        match Regex.IsMatch(words.InnerText, ScenePrologueRegex) with
+                        | true ->
+                            block.FontSize <- 30
+
+                        | false ->
+                            ()
+                        
                         // Applies italic tags to the text fragment.
                         match prop.Italic with
                         | _ when prop.Italic <> null && Regex.IsMatch(words.InnerText, matchCriteria) ->
