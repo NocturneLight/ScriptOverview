@@ -22,6 +22,9 @@
     <Compile Include="ViewModels\FileOverviewViewModel.fs" />
     <Compile Include="ViewModels\FileSelectViewModel.fs" />
     <Compile Include="ViewModels\MainWindowViewModel.fs" />
+    <None Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <Compile Include="Views\FileOverviewView.axaml.fs" />
     <Compile Include="Views\FileSelectView.axaml.fs" />
     <Compile Include="Views\MainWindow.axaml.fs" />
@@ -29,6 +32,8 @@
     <Compile Include="App.axaml.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
+  <ItemGroup />
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.0.6" />

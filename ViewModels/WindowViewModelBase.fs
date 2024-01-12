@@ -1,8 +1,6 @@
 ﻿namespace ScriptOverview.ViewModels
 
 open System
-open System.Windows.Input
-open Avalonia.Platform.Storage
 
 type VIEWS =
     | FILESELECT
